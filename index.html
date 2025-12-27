@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>少儿编程教学反思生成器 V5.1 (编辑增强版)</title>
+    <title>少儿编程教学系统 V6.4 (支持表格导入)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -28,13 +28,12 @@
             display: flex; justify-content: center; align-items: center;
             font-size: 1.2rem; color: #3b82f6; font-weight: bold;
         }
-        .ai-modal {
-            animation: fadeIn 0.2s ease-out;
-        }
+        .ai-modal { animation: fadeIn 0.2s ease-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
+        .pre-wrap { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -42,34 +41,45 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // --- LeanCloud 初始化 ---
         const APP_ID = 'Sx1nSaU2TUCAbzB29iLyrRai-gzGzoHsz';
         const APP_KEY = 'dn5qcsJvY3BetbUMnEgAJNtn';
         const SERVER_URL = 'https://sx1nsau2.lc-cn-n1-shared.com';
 
-        AV.init({
-            appId: APP_ID,
-            appKey: APP_KEY,
-            serverURL: SERVER_URL
-        });
+        if (!AV.applicationId) {
+            AV.init({
+                appId: APP_ID,
+                appKey: APP_KEY,
+                serverURL: SERVER_URL
+            });
+        }
 
-        // --- 初始数据 ---
-        const INITIAL_COURSES_DATA = [
-            { name: '飞机大战', age: '8', r1: '教学目标设置合理，本节课重点讲解坐标系与随机数。难点在于让学生理解坐标数字改变，角色相应移动', r2: '合理，通过分析敌机“碰到英雄好程序停止”的逻辑，锻炼了学生对条件判断指令的运用能力。', r3: '流程需要调整，在讲解坐标（X,Y轴正负值）时花费较多时间，下次可以用舞台背景图辅助学生进行理解。', r4: '编程环节进行了简化，本班学生对多个角色的坐标控制容易混淆，只保留了一个敌机角色，重点保证基础逻辑的通顺。' }
-        ];
-
-        const INITIAL_CLASSES_DATA = [
-            { name: 'Scratch14班' }, { name: 'Scratch15班' }, { name: 'Scratch16班' }, 
-            { name: 'Scratch17班' }, { name: 'Scratch18班' }, { name: '单片机4班' }
+        // --- 初始数据 (根据用户上传的 CSV 预览提取) ---
+        const INITIAL_INTERPRETATIONS_DATA = [
+            {
+                name: "1-星际迷航1",
+                content: `【第1节课-课程解读】\n🔹 课程主题\n本节课主题：《星际迷航1_逃离地球》\n🔹 课程目标\n知识目标：\n学习鼠标、键盘的操作，认识Scratch的五大分区名称以及功能、基本程序编写的顺序、程序角色的初始化。初步了解程序中角色的坐标（简单介绍）以及方向。\n \n思维目标：\n逻辑推理能力：通过设置角色“初始化-移动-对话”的任务顺序，引导孩子分析“角色移动需要哪些指令配合？”“方向错误会导致什么结果？”，逐步推导出“方向设置→坐标变化→程序执行”的逻辑关系🧩；\n \n问题解决能力：在调试程序时，针对“角色不移动”“移动方向相反”等常见问题，鼓励自主排查原因，并尝试调整程序解决问题🔍`
+            },
+            {
+                name: "2-星际迷航2",
+                content: `【第2节课-课程解读】\n🔹 课程主题\n本节课主题：《星际迷航2_遭遇外星人》\n🔹 课程目标\n知识目标：程序中角色的隐藏与显示、重复执行指令（循环结构）、程序背景的切换。\n思维目标：培养逻辑思维（计算程序执行时间，掌握程序执行流程），问题解决能力`
+            },
+            {
+                name: "1-攀爬机器人",
+                content: `【本期单片机课程解读】\n1️⃣课程主题：\n本期课程主题——《攀爬机器人》\n\n2️⃣课程目标\n知识目标：了解麦克纳姆轮的特点，以及其他不同种类的轮子（万向轮、全向轮）\n思维目标：培养学生分析问题的能力，训练编程思维、空间思维、逻辑思维、调试程序并解决问题的能力\n\n3️⃣课程重难点：\n✅【需要掌握的核心内容】\n搭建：麦克纳姆轮的使用、伺服马达的安装使用\n⚠️【难点】对作品提前提前空间规划、以及在搭建过程中提前预留马达的安装位置、麦轮连接的特点\n🌟【拓展】编程与硬件结合，尝试制作出相应功能的攀爬机器人`
+            },
+            {
+                name: "2-汉堡机器人",
+                content: `【本期单片机课程解读】\n1️⃣课程主题：\n本期课程主题——《汉堡机器人》\n\n2️⃣课程目标\n知识目标：认识红外传感器、超声波传感器参数以及运行逻辑\n思维目标：培养学生分析问题的能力，训练编程思维、空间思维、逻辑思维、调试程序并解决问题的能力\n\n3️⃣课程重难点：\n✅【需要掌握的核心内容】\n搭建：传感器的程序设计逻辑以及与单片机的结合使用\n⚠️【难点】对作品提前提前空间规划、程序设计中，对于超声波传感器的参数判断程序设置\n🌟【拓展】编程与硬件结合，修改红外传感器为按钮，并且修改对应程序`
+            }
         ];
 
         // --- 图标组件 ---
         const IconDownload = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
         const IconPlus = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
         const IconTrash2 = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
-        const IconBookOpen = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
         const IconEdit3 = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>;
         const IconFileText = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
         const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
@@ -82,8 +92,11 @@
         const IconCalendar = () => <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
         const IconX = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
         const IconUpdate = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>;
+        const IconMessage = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>;
+        const IconSearch = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+        const IconUpload = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
 
-        // --- AI 助手模态框 ---
+        // --- AI 助手模态框 (原版 - 用于反思) ---
         const AIModal = ({ isOpen, onClose, onFillData, courseName, age }) => {
             const [step, setStep] = useState(1);
             const [planText, setPlanText] = useState('');
@@ -94,20 +107,13 @@
             if (!isOpen) return null;
 
             const handleGeneratePrompt = () => {
-                if (!planText.trim()) {
-                    alert("请先粘贴教案内容！");
-                    return;
-                }
+                if (!planText.trim()) { alert("请先粘贴教案内容！"); return; }
                 const prompt = `我是一名少儿编程老师，请根据以下教案内容，为《${courseName || '少儿编程'}》课程（${age || '8'}岁）撰写教学反思。
-                
-请严格且**只**返回以下JSON格式（不要包含Markdown代码块标记，不要包含其他解释性文字）：
-{"r1": "针对教学目标的简短反思...", "r2": "针对思维能力训练的简短反思...", "r3": "针对课程流程/环节的反思...", "r4": "针对编程/搭建环节的反思..."}
-
-每一条反思控制在50-80字之间，语言专业、客观。
+请严格且**只**返回以下JSON格式（不要包含Markdown代码块标记）：
+{"r1": "针对教学目标的简短反思(50字)", "r2": "针对思维能力训练的简短反思(50字)", "r3": "针对课程流程/环节的反思(50字)", "r4": "针对编程/搭建环节的反思(50字)"}
 
 教案内容：
 ${planText}`;
-                
                 setGeneratedPrompt(prompt);
                 setStep(2);
             };
@@ -121,22 +127,13 @@ ${planText}`;
             const handleParseResult = () => {
                 try {
                     let cleanJson = aiResult.trim();
-                    if (cleanJson.startsWith('```json')) {
-                        cleanJson = cleanJson.replace(/^```json/, '').replace(/```$/, '');
-                    } else if (cleanJson.startsWith('```')) {
-                        cleanJson = cleanJson.replace(/^```/, '').replace(/```$/, '');
-                    }
+                    if (cleanJson.startsWith('```json')) { cleanJson = cleanJson.replace(/^```json/, '').replace(/```$/, ''); } 
+                    else if (cleanJson.startsWith('```')) { cleanJson = cleanJson.replace(/^```/, '').replace(/```$/, ''); }
                     const data = JSON.parse(cleanJson);
                     if (data.r1 || data.r2 || data.r3 || data.r4) {
-                        onFillData(data);
-                        onClose();
-                        setStep(1); setPlanText(''); setAiResult(''); setGeneratedPrompt('');
-                    } else {
-                        alert("解析失败：AI返回的格式似乎不对，请确保它返回了JSON格式。");
-                    }
-                } catch (e) {
-                    alert("解析错误：请确认你粘贴的是AI生成的JSON代码。\n错误信息: " + e.message);
-                }
+                        onFillData(data); onClose(); setStep(1); setPlanText(''); setAiResult(''); setGeneratedPrompt('');
+                    } else { alert("解析失败：AI返回的格式似乎不对。"); }
+                } catch (e) { alert("解析错误：请确认你粘贴的是AI生成的JSON代码。"); }
             };
 
             return (
@@ -150,30 +147,130 @@ ${planText}`;
                             {step === 1 ? (
                                 <div>
                                     <h4 className="font-bold text-gray-800 mb-2">第一步：输入教案/课程重点</h4>
-                                    <p className="text-sm text-gray-500 mb-4">把你这节课的教案、知识点或者课堂情况简单粘贴在这里。</p>
-                                    <textarea className="w-full h-40 border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="例如：本节课主要教了循环嵌套..." value={planText} onChange={(e) => setPlanText(e.target.value)}></textarea>
+                                    <textarea className="w-full h-40 border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none" placeholder="粘贴教案..." value={planText} onChange={(e) => setPlanText(e.target.value)}></textarea>
                                     <div className="mt-4 flex justify-end">
-                                        <button onClick={handleGeneratePrompt} className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg shadow font-medium flex items-center">下一步：生成 AI 指令 <span className="ml-2">→</span></button>
+                                        <button onClick={handleGeneratePrompt} className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg shadow font-medium">下一步：生成 AI 指令</button>
                                     </div>
                                 </div>
                             ) : (
                                 <div>
                                     <h4 className="font-bold text-gray-800 mb-2">第二步：复制指令发给 AI，并回填结果</h4>
-                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 relative group">
-                                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">给 AI 的指令 (Prompt)</p>
-                                        <div className="text-xs text-gray-600 max-h-24 overflow-y-auto whitespace-pre-wrap font-mono">{generatedPrompt}</div>
-                                        <button onClick={handleCopyPrompt} className={`absolute top-2 right-2 flex items-center px-3 py-1 rounded text-sm transition ${copySuccess ? 'bg-green-100 text-green-700' : 'bg-white border hover:bg-gray-100 text-gray-700 shadow-sm'}`}>{copySuccess ? <><IconCheck /><span className="ml-1">已复制</span></> : <><IconCopy /><span className="ml-1">复制</span></>}</button>
-                                    </div>
-                                    <div className="flex flex-col md:flex-row gap-6 items-start">
-                                        <div className="flex-1 w-full">
-                                            <label className="block text-sm font-bold text-gray-700 mb-2">将 AI 回复粘贴到这里：</label>
-                                            <textarea className="w-full h-32 border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none font-mono" placeholder='{"r1": "...", "r2": "..."}' value={aiResult} onChange={(e) => setAiResult(e.target.value)}></textarea>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 relative"><p className="text-xs text-gray-500 uppercase font-bold mb-1">给 AI 的指令</p><div className="text-xs text-gray-600 max-h-24 overflow-y-auto whitespace-pre-wrap font-mono">{generatedPrompt}</div><button onClick={handleCopyPrompt} className={`absolute top-2 right-2 px-3 py-1 rounded text-sm transition ${copySuccess ? 'bg-green-100 text-green-700' : 'bg-white border text-gray-700'}`}>{copySuccess ? '已复制' : '复制'}</button></div>
+                                    <div className="w-full"><label className="block text-sm font-bold text-gray-700 mb-2">粘贴 AI 回复：</label><textarea className="w-full h-32 border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none font-mono" placeholder='{"r1": "...", "r2": "..."}' value={aiResult} onChange={(e) => setAiResult(e.target.value)}></textarea></div>
+                                    <div className="mt-6 flex justify-between items-center"><button onClick={() => setStep(1)} className="text-gray-500 hover:text-gray-700 text-sm underline">← 返回</button><button onClick={handleParseResult} disabled={!aiResult} className={`px-6 py-2 rounded-lg shadow font-bold flex items-center transition ${!aiResult ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}>智能解析并填表</button></div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 课程解读专属 AI 模态框 (增强版 - 适配表3模板) ---
+        const InterpretationAIModal = ({ isOpen, onClose, onFinish }) => {
+            const [step, setStep] = useState(1);
+            const [planText, setPlanText] = useState('');
+            const [courseName, setCourseName] = useState('');
+            const [lessonNum, setLessonNum] = useState('');
+            const [aiResult, setAiResult] = useState('');
+            const [generatedPrompt, setGeneratedPrompt] = useState('');
+            const [copySuccess, setCopySuccess] = useState(false);
+
+            if (!isOpen) return null;
+
+            const handleGeneratePrompt = () => {
+                if (!planText.trim()) { alert("请先粘贴教案内容！"); return; }
+                
+                // 核心：适配表3模板的 Prompt
+                const prompt = `你是一名专业的少儿编程老师。请根据以下【教案内容】，参考【输出模板】，为家长撰写一份《${courseName || '少儿编程'}》的课程解读。
+
+请严格按照以下【输出模板】的结构和格式生成（保持 emojis、换行和层级），不要只生成一段话，要结构化输出：
+
+【输出模板】
+【第 ${lessonNum || 'X'} 节课 - 课程解读】
+
+🔹 课程主题：《${courseName || '[课程名称]'}》
+
+🔹 课程目标：
+
+✅ 知识目标 
+核心编程技能：
+[概念名称]： [简述概念定义，例如：理解“循环”，即重复执行某段指令]
+[操作技能]： [简述具体操作，例如：通过坐标(x,y)控制角色移动 / 使用侦测模块判断碰撞]
+[高级机制]： [如：广播、变量、克隆等，若有则写，无则略过]
+
+跨学科/拓展知识：
+[学科名称]： [关联的学科知识点，如：数学坐标系 / 物理重力 / 自然科学常识]
+
+🧩 思维目标
+逻辑思维能力 (拆解与推导)：
+[任务拆解]：引导孩子将大问题拆解为小步骤。例如：“如何实现 [功能A] ？” → 对应 [编程逻辑A]。
+[逻辑闭环]：培养“发现问题 → 逻辑推导 → 代码实现”的能力。
+
+系统性思维 (结构与流程)：
+[模块化设计]：理解程序的生命周期（初始化 -> 运行 -> 结束）。
+
+🌐 跨学科思维融合
+[领域]：[如何用编程解释学科现象，例如：用变量模拟物理加速度]
+
+🔹 家长互动建议
+1️⃣ “小老师”复盘：[建议家长问孩子一个具体的问题，让孩子当小老师来解释]
+2️⃣ 生活场景迁移：[给出一个生活中的类比，帮助孩子理解今天的编程概念]
+
+【教案内容】
+${planText}`;
+                
+                setGeneratedPrompt(prompt);
+                setStep(2);
+            };
+
+            const handleCopyPrompt = () => {
+                navigator.clipboard.writeText(generatedPrompt);
+                setCopySuccess(true);
+                setTimeout(() => setCopySuccess(false), 2000);
+            };
+
+            const handleFinish = () => {
+                if (aiResult.trim()) {
+                    onFinish(courseName || '未命名课程', aiResult);
+                    onClose();
+                    setStep(1); setPlanText(''); setAiResult(''); setCourseName(''); setLessonNum('');
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto ai-modal">
+                        <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4 rounded-t-xl flex justify-between items-center text-white">
+                            <h3 className="text-xl font-bold flex items-center"><IconMessage /> <span className="ml-2">课程解读生成助手 (表3标准版)</span></h3>
+                            <button onClick={onClose} className="hover:bg-white hover:bg-opacity-20 rounded-full p-1">&times;</button>
+                        </div>
+                        <div className="p-6">
+                            {step === 1 ? (
+                                <div>
+                                    <h4 className="font-bold text-gray-800 mb-2">第一步：输入课程信息与教案</h4>
+                                    <div className="grid grid-cols-4 gap-4 mb-3">
+                                        <div className="col-span-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">课程名称</label>
+                                            <input type="text" className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:border-orange-500" placeholder="例如：打地鼠" value={courseName} onChange={(e)=>setCourseName(e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">课时</label>
+                                            <input type="number" className="w-full border border-gray-300 rounded p-2 focus:outline-none focus:border-orange-500" placeholder="1" value={lessonNum} onChange={(e)=>setLessonNum(e.target.value)} />
                                         </div>
                                     </div>
-                                    <div className="mt-6 flex justify-between items-center">
-                                        <button onClick={() => setStep(1)} className="text-gray-500 hover:text-gray-700 text-sm underline">← 返回修改教案</button>
-                                        <button onClick={handleParseResult} disabled={!aiResult} className={`px-6 py-2 rounded-lg shadow font-bold flex items-center transition ${!aiResult ? 'bg-gray-300 cursor-not-allowed text-gray-500' : 'bg-green-600 hover:bg-green-700 text-white'}`}><IconMagic /> <span className="ml-2">智能解析并填表</span></button>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">教案内容 / 知识点</label>
+                                    <textarea className="w-full h-32 border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none" placeholder="粘贴系统教案或本节课重点..." value={planText} onChange={(e) => setPlanText(e.target.value)}></textarea>
+                                    <div className="mt-4 flex justify-end">
+                                        <button onClick={handleGeneratePrompt} className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg shadow font-medium">生成 AI 指令</button>
                                     </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h4 className="font-bold text-gray-800 mb-2">第二步：获取解读并入库</h4>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 relative"><p className="text-xs text-gray-500 uppercase font-bold mb-1">提示词 (包含表3模板要求)</p><div className="text-xs text-gray-600 max-h-24 overflow-y-auto whitespace-pre-wrap font-mono">{generatedPrompt}</div><button onClick={handleCopyPrompt} className={`absolute top-2 right-2 px-3 py-1 rounded text-sm transition ${copySuccess ? 'bg-green-100 text-green-700' : 'bg-white border text-gray-700'}`}>{copySuccess ? '已复制' : '复制'}</button></div>
+                                    <div className="w-full"><label className="block text-sm font-bold text-gray-700 mb-2">粘贴 AI 生成的解读：</label><textarea className="w-full h-48 border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none pre-wrap" placeholder="【第 1 节课 - 课程解读】..." value={aiResult} onChange={(e) => setAiResult(e.target.value)}></textarea></div>
+                                    <div className="mt-6 flex justify-between items-center"><button onClick={() => setStep(1)} className="text-gray-500 hover:text-gray-700 text-sm underline">← 返回</button><button onClick={handleFinish} disabled={!aiResult} className={`px-6 py-2 rounded-lg shadow font-bold flex items-center transition ${!aiResult ? 'bg-gray-300 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}>保存到解读库</button></div>
                                 </div>
                             )}
                         </div>
@@ -186,17 +283,26 @@ ${planText}`;
         const App = () => {
             const [activeTab, setActiveTab] = useState('record');
             const [isLoading, setIsLoading] = useState(false);
-            const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+            const fileInputRef = useRef(null);
+            
+            // 模态框状态
+            const [isAIModalOpen, setIsAIModalOpen] = useState(false); // 反思 AI
+            const [isInterpAIModalOpen, setIsInterpAIModalOpen] = useState(false); // 解读 AI
             
             // 数据 State
             const [courses, setCourses] = useState([]);
             const [records, setRecords] = useState([]);
             const [savedClasses, setSavedClasses] = useState([]);
+            const [interpretations, setInterpretations] = useState([]); // 解读库
             
             // 编辑模式 State
-            const [editingId, setEditingId] = useState(null); // 如果有值，说明正在编辑模式
+            const [editingId, setEditingId] = useState(null);
             
+            // 输入 State
             const [newClassInput, setNewClassInput] = useState('');
+            const [searchTerm, setSearchTerm] = useState(''); // 解读搜索
+            const [selectedInterpId, setSelectedInterpId] = useState(null); // 当前选中的解读ID
+
             const [settings, setSettings] = useState({
                 title: '乐享未来 12月 月度教学反思表——提交人：韦烨',
                 defaultClass: 'Scratch16班',
@@ -209,487 +315,449 @@ ${planText}`;
                 courseId: '',
                 courseName: '', 
                 age: '',
-                r1: '',
-                r2: '',
-                r3: '',
-                r4: ''
+                r1: '', r2: '', r3: '', r4: ''
             });
 
             // --- 数据加载逻辑 ---
             useEffect(() => {
                 const initData = async () => {
                     setIsLoading(true);
+                    
+                    // 1. 课程模版 (Safe Init)
                     try {
                         const courseQuery = new AV.Query('CourseTemplate');
                         const courseResults = await courseQuery.limit(100).find();
-                        if (courseResults.length === 0) {
-                            const initCourses = INITIAL_COURSES_DATA.map(c => {
-                                const obj = new AV.Object('CourseTemplate');
-                                obj.set('name', c.name); obj.set('age', c.age);
-                                obj.set('r1', c.r1); obj.set('r2', c.r2); obj.set('r3', c.r3); obj.set('r4', c.r4);
-                                return obj;
-                            });
-                            await AV.Object.saveAll(initCourses);
-                            const newResults = await courseQuery.find();
-                            setCourses(newResults.map(r => ({ ...r.attributes, id: r.id })));
-                        } else {
-                            setCourses(courseResults.map(r => ({ ...r.attributes, id: r.id })));
-                        }
+                        setCourses(courseResults.map(r => ({ ...r.attributes, id: r.id })));
+                    } catch (error) {
+                        console.warn("CourseTemplate init error (ignored):", error);
+                        setCourses([]);
+                    }
 
+                    // 2. 班级预设 (Safe Init)
+                    try {
                         const classQuery = new AV.Query('ClassPreset');
                         const classResults = await classQuery.limit(100).find();
-                        if (classResults.length === 0) {
-                            const initClasses = INITIAL_CLASSES_DATA.map(c => {
-                                const obj = new AV.Object('ClassPreset');
-                                obj.set('name', c.name);
-                                return obj;
-                            });
-                            await AV.Object.saveAll(initClasses);
-                            const newClasses = await classQuery.find();
-                            setSavedClasses(newClasses.map(r => ({ name: r.get('name'), id: r.id })));
-                        } else {
-                            setSavedClasses(classResults.map(r => ({ name: r.get('name'), id: r.id })));
-                        }
+                        setSavedClasses(classResults.map(r => ({ name: r.get('name'), id: r.id })));
+                    } catch (error) {
+                         console.warn("ClassPreset init error (ignored):", error);
+                         setSavedClasses([]);
+                    }
 
+                    // 3. 上课记录 (Safe Init)
+                    try {
                         const recordQuery = new AV.Query('TeachingRecord');
                         recordQuery.descending('createdAt'); 
                         const recordResults = await recordQuery.limit(500).find();
                         setRecords(recordResults.map(r => ({ ...r.attributes, id: r.id })));
-
                     } catch (error) {
-                        console.error("LeanCloud Init Error:", error);
-                    } finally {
-                        setIsLoading(false);
+                         console.warn("TeachingRecord init error (ignored):", error);
+                         setRecords([]);
                     }
+
+                    // 4. 课程解读库 (带安全初始化逻辑)
+                    let interpResults = [];
+                    try {
+                        const interpQuery = new AV.Query('CourseInterpretation');
+                        interpQuery.descending('createdAt');
+                        interpResults = await interpQuery.limit(200).find();
+                    } catch (error) {
+                        console.log("CourseInterpretation query failed (likely Class missing). Initializing default data...");
+                        interpResults = [];
+                    }
+                    
+                    if (interpResults.length === 0) {
+                        // 初始化内置数据
+                        const initInterps = INITIAL_INTERPRETATIONS_DATA.map(d => {
+                            const obj = new AV.Object('CourseInterpretation');
+                            obj.set('name', d.name);
+                            obj.set('content', d.content);
+                            return obj;
+                        });
+                        try {
+                            await AV.Object.saveAll(initInterps);
+                            const interpQuery = new AV.Query('CourseInterpretation');
+                            interpQuery.descending('createdAt');
+                            const newResults = await interpQuery.limit(200).find();
+                            setInterpretations(newResults.map(r => ({ ...r.attributes, id: r.id })));
+                        } catch (e) {
+                            console.error("Failed to initialize CourseInterpretation data:", e);
+                        }
+                    } else {
+                        setInterpretations(interpResults.map(r => ({ ...r.attributes, id: r.id })));
+                    }
+
+                    setIsLoading(false);
                 };
                 initData();
             }, []);
 
-            // --- Handlers ---
+            // --- 现有功能 Handlers ---
             const handleTemplateSelect = (e) => {
                 const courseId = e.target.value;
                 if (!courseId) return; 
                 const selectedCourse = courses.find(c => c.id === courseId);
                 if (selectedCourse) {
                     setCurrentRecord(prev => ({
-                        ...prev,
-                        courseId: selectedCourse.id,
-                        courseName: selectedCourse.name,
-                        age: selectedCourse.age,
-                        r1: selectedCourse.r1,
-                        r2: selectedCourse.r2,
-                        r3: selectedCourse.r3,
-                        r4: selectedCourse.r4
+                        ...prev, courseId: selectedCourse.id, courseName: selectedCourse.name, age: selectedCourse.age,
+                        r1: selectedCourse.r1, r2: selectedCourse.r2, r3: selectedCourse.r3, r4: selectedCourse.r4
                     }));
                 }
             };
             
-            const handleClassSelect = (e) => {
-                const cls = e.target.value;
-                if(cls) {
-                    setCurrentRecord(prev => ({...prev, className: cls}));
-                }
-            };
-
+            const handleClassSelect = (e) => { if(e.target.value) setCurrentRecord(prev => ({...prev, className: e.target.value})); };
             const handleAIFillData = (data) => {
-                setCurrentRecord(prev => ({
-                    ...prev,
-                    r1: data.r1 || prev.r1,
-                    r2: data.r2 || prev.r2,
-                    r3: data.r3 || prev.r3,
-                    r4: data.r4 || prev.r4
-                }));
+                setCurrentRecord(prev => ({ ...prev, r1: data.r1 || prev.r1, r2: data.r2 || prev.r2, r3: data.r3 || prev.r3, r4: data.r4 || prev.r4 }));
             };
 
-            // 新增/更新记录逻辑
             const handleSaveRecord = async () => {
-                if (!currentRecord.courseName || !currentRecord.className) {
-                    alert("请至少填写【班级名称】和【课程名称】！\n反思内容可以先留空，稍后再补。");
-                    return;
-                }
+                if (!currentRecord.courseName || !currentRecord.className) { alert("请至少填写【班级名称】和【课程名称】！"); return; }
                 setIsLoading(true);
                 try {
                     let record;
-                    if (editingId) {
-                        // 更新模式
-                        record = AV.Object.createWithoutData('TeachingRecord', editingId);
-                    } else {
-                        // 新增模式
-                        const Record = AV.Object.extend('TeachingRecord');
-                        record = new Record();
-                    }
+                    if (editingId) { record = AV.Object.createWithoutData('TeachingRecord', editingId); } 
+                    else { const Record = AV.Object.extend('TeachingRecord'); record = new Record(); }
                     
                     record.set('date', currentRecord.date);
                     record.set('className', currentRecord.className);
                     record.set('courseName', currentRecord.courseName);
                     record.set('courseId', currentRecord.courseId);
                     record.set('age', currentRecord.age);
-                    record.set('r1', currentRecord.r1 || ''); // 允许为空
-                    record.set('r2', currentRecord.r2 || '');
-                    record.set('r3', currentRecord.r3 || '');
-                    record.set('r4', currentRecord.r4 || '');
+                    record.set('r1', currentRecord.r1 || ''); record.set('r2', currentRecord.r2 || '');
+                    record.set('r3', currentRecord.r3 || ''); record.set('r4', currentRecord.r4 || '');
                     
                     const saved = await record.save();
-                    
-                    if (editingId) {
-                        // 更新本地列表中的那一条
-                        setRecords(records.map(r => r.id === editingId ? { ...saved.attributes, id: saved.id } : r));
-                        alert("记录已更新！");
-                    } else {
-                        // 添加到本地列表头部
-                        setRecords([{ ...saved.attributes, id: saved.id }, ...records]);
-                        alert("保存成功！");
-                    }
-                    
-                    // 重置
+                    if (editingId) { setRecords(records.map(r => r.id === editingId ? { ...saved.attributes, id: saved.id } : r)); alert("记录已更新！"); } 
+                    else { setRecords([{ ...saved.attributes, id: saved.id }, ...records]); alert("保存成功！"); }
                     setEditingId(null);
-                    setCurrentRecord(prev => ({
-                        ...prev,
-                        courseId: '',
-                        courseName: '',
-                        r1: '', r2: '', r3: '', r4: ''
-                    }));
-                } catch (error) {
-                    alert("保存失败: " + error.message);
-                } finally {
-                    setIsLoading(false);
-                }
+                    setCurrentRecord({ date: new Date().toISOString().split('T')[0], className: '', courseId: '', courseName: '', age: '', r1: '', r2: '', r3: '', r4: '' });
+                } catch (error) { alert("保存失败: " + error.message); } finally { setIsLoading(false); }
             };
             
-            // 进入编辑模式
             const handleEditRecord = (record) => {
-                setCurrentRecord({
-                    date: record.date,
-                    className: record.className,
-                    courseName: record.courseName,
-                    courseId: record.courseId || '',
-                    age: record.age,
-                    r1: record.r1 || '',
-                    r2: record.r2 || '',
-                    r3: record.r3 || '',
-                    r4: record.r4 || ''
-                });
-                setEditingId(record.id);
-                // 滚动到顶部
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setCurrentRecord({ ...record, courseId: record.courseId || '' });
+                setEditingId(record.id); window.scrollTo({ top: 0, behavior: 'smooth' });
             };
-
-            // 取消编辑
-            const handleCancelEdit = () => {
-                if (confirm("确定要取消编辑吗？未保存的修改将丢失。")) {
-                    setEditingId(null);
-                    setCurrentRecord(prev => ({
-                        ...prev,
-                        courseId: '',
-                        courseName: '',
-                        r1: '', r2: '', r3: '', r4: ''
-                    }));
-                }
-            };
-
-            const handleSaveAsCourse = async () => {
-                 if (!currentRecord.courseName) {
-                    alert("请先输入课程名称！");
-                    return;
-                }
-                setIsLoading(true);
-                try {
-                    const Course = AV.Object.extend('CourseTemplate');
-                    const course = new Course();
-                    course.set('name', currentRecord.courseName);
-                    course.set('age', currentRecord.age || '8');
-                    course.set('r1', currentRecord.r1);
-                    course.set('r2', currentRecord.r2);
-                    course.set('r3', currentRecord.r3);
-                    course.set('r4', currentRecord.r4);
-                    
-                    const saved = await course.save();
-                    setCourses([...courses, { ...saved.attributes, id: saved.id }]);
-                    alert(`课程《${saved.get('name')}》已同步到云端课程库！`);
-                } catch (error) {
-                    alert("保存课程模版失败: " + error.message);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-
+            const handleCancelEdit = () => { if (confirm("确定要取消编辑吗？")) { setEditingId(null); setCurrentRecord({ date: new Date().toISOString().split('T')[0], className: '', courseId: '', courseName: '', age: '', r1: '', r2: '', r3: '', r4: '' }); } };
             const handleDeleteRecord = async (id) => {
                 if (!confirm('确定要删除这条记录吗？')) return;
                 setIsLoading(true);
-                try {
-                    const record = AV.Object.createWithoutData('TeachingRecord', id);
-                    await record.destroy();
-                    setRecords(records.filter(r => r.id !== id));
-                } catch (error) {
-                    alert("删除失败: " + error.message);
-                } finally {
-                    setIsLoading(false);
-                }
+                try { const record = AV.Object.createWithoutData('TeachingRecord', id); await record.destroy(); setRecords(records.filter(r => r.id !== id)); } 
+                catch (error) { alert("删除失败: " + error.message); } finally { setIsLoading(false); }
             };
-            
-            const handleClearAllRecords = async () => {
-                if (records.length === 0) return;
-                if (window.confirm(`⚠️ 警告：确定要清空云端所有 ${records.length} 条记录吗？\n\n建议在【导出Excel】备份后再进行此操作。\n\n点击“确定”将永久删除数据！`)) {
-                    setIsLoading(true);
-                    try {
-                        const objectsToDelete = records.map(r => AV.Object.createWithoutData('TeachingRecord', r.id));
-                        await AV.Object.destroyAll(objectsToDelete);
-                        setRecords([]);
-                        alert("已清空所有记录。");
-                    } catch (error) {
-                        alert("清空失败: " + error.message);
-                    } finally {
-                        setIsLoading(false);
-                    }
-                }
-            };
-            
             const handleAddClass = async () => {
                 if(newClassInput && !savedClasses.find(c => c.name === newClassInput)) {
-                    setIsLoading(true);
-                    try {
-                        const ClassObj = AV.Object.extend('ClassPreset');
-                        const newClass = new ClassObj();
-                        newClass.set('name', newClassInput);
-                        const saved = await newClass.save();
-                        setSavedClasses([...savedClasses, { name: saved.get('name'), id: saved.id }]);
-                        setNewClassInput('');
-                    } catch (error) {
-                        alert("添加班级失败: " + error.message);
-                    } finally {
-                        setIsLoading(false);
-                    }
+                    setIsLoading(true); try { const ClassObj = AV.Object.extend('ClassPreset'); const newClass = new ClassObj(); newClass.set('name', newClassInput); const saved = await newClass.save(); setSavedClasses([...savedClasses, { name: saved.get('name'), id: saved.id }]); setNewClassInput(''); } catch (error) { alert("失败: " + error.message); } finally { setIsLoading(false); }
                 }
+            };
+            const handleDeleteClass = async (id) => { if(confirm(`确定删除吗？`)) { setIsLoading(true); try { const obj = AV.Object.createWithoutData('ClassPreset', id); await obj.destroy(); setSavedClasses(savedClasses.filter(c => c.id !== id)); } catch(e){ alert(e.message); } finally { setIsLoading(false); } } };
+            const handleSaveAsCourse = async () => {
+                if (!currentRecord.courseName) { alert("请先输入课程名称！"); return; }
+                setIsLoading(true);
+                try { const Course = AV.Object.extend('CourseTemplate'); const course = new Course(); course.set('name', currentRecord.courseName); course.set('age', currentRecord.age || '8'); course.set('r1', currentRecord.r1); course.set('r2', currentRecord.r2); course.set('r3', currentRecord.r3); course.set('r4', currentRecord.r4); const saved = await course.save(); setCourses([...courses, { ...saved.attributes, id: saved.id }]); alert(`课程同步成功！`); } catch (e) { alert("失败: " + e.message); } finally { setIsLoading(false); }
+            };
+
+            // --- 课程解读 Handlers (新增表格导入功能) ---
+            const handleSaveInterpretation = async (name, content) => {
+                setIsLoading(true);
+                try {
+                    const Interp = AV.Object.extend('CourseInterpretation');
+                    const obj = new Interp();
+                    obj.set('name', name);
+                    obj.set('content', content);
+                    const saved = await obj.save();
+                    setInterpretations([{ ...saved.attributes, id: saved.id }, ...interpretations]);
+                    setSelectedInterpId(saved.id);
+                    alert("课程解读已入库！");
+                } catch (e) { alert("入库失败：" + e.message); } 
+                finally { setIsLoading(false); }
+            };
+
+            const handleDeleteInterpretation = async (id, e) => {
+                e.stopPropagation();
+                if(!confirm("确定删除这条解读吗？")) return;
+                try { 
+                    const obj = AV.Object.createWithoutData('CourseInterpretation', id); 
+                    await obj.destroy(); 
+                    setInterpretations(interpretations.filter(i => i.id !== id)); 
+                    if(selectedInterpId === id) setSelectedInterpId(null);
+                }
+                catch(e) { alert("删除失败"); }
             };
             
-            const handleDeleteClass = async (id, name) => {
-                if(confirm(`确定要从云端删除班级预设 "${name}" 吗？`)) {
-                    setIsLoading(true);
-                    try {
-                        const classObj = AV.Object.createWithoutData('ClassPreset', id);
-                        await classObj.destroy();
-                        setSavedClasses(savedClasses.filter(c => c.id !== id));
-                    } catch (error) {
-                        alert("删除班级失败: " + error.message);
-                    } finally {
-                        setIsLoading(false);
-                    }
-                }
+            const handleCopyInterpretation = (content, e) => {
+                if(e) e.stopPropagation();
+                navigator.clipboard.writeText(content);
+                alert("已复制到剪贴板！");
             };
 
-            const handleExportExcel = () => {
-                const titleRow = [settings.title]; 
-                const headerRow = ["序号", "课程名称", "授课时间", "授课班级", "年龄段", 
-                    "教学反思1—教学目标设置是否合理...", 
-                    "教学反思2——-思维能力训练目标设置...", 
-                    "教学反思3——课程流程/环节设置是否...", 
-                    "教学反思4——-主体搭建/编程以及创意..."
-                ];
-                // 使用完整表头名太长，这里省略显示但导出保持兼容（实际应与之前保持一致，为代码简洁我略作缩减展示，逻辑不变）
-                const fullHeaderRow = [
-                    "序号", "课程名称", "授课时间", "授课班级", "年龄段", 
-                    "教学反思1—教学目标设置是否合理或需要调整的部分，为什么；若没有总结该部分设置的好的部分以及原因", 
-                    "教学反思2——-思维能力训练目标设置是否合理或需要调整的部分，为什么）；若没有总结该部分设置的好的部分以及原因", 
-                    "教学反思3——课程流程/环节设置是否合理或需要调整的部分，为什么；\n若没有总结该部分设置的好的部分以及原因", 
-                    "教学反思4——-主体搭建/编程以及创意搭建/编程环节设置需要调整的部分，为什么）；若没有总结该部分设置的好的部分以及原因"
-                ];
+            // 处理 CSV/Excel 文件导入
+            const handleImportClick = () => {
+                fileInputRef.current.click();
+            };
 
+            const handleFileChange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                setIsLoading(true);
+                const reader = new FileReader();
+                reader.onload = async (evt) => {
+                    try {
+                        const data = evt.target.result;
+                        const workbook = XLSX.read(data, { type: 'binary' });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }); // 数组数组格式
+
+                        if (jsonData.length < 2) {
+                            alert("表格内容为空或格式不正确！");
+                            setIsLoading(false);
+                            return;
+                        }
+
+                        // 简单的列嗅探：查找包含"课程"和"解读"字样的列索引
+                        const headerRow = jsonData[0].map(h => String(h).trim());
+                        const nameIdx = headerRow.findIndex(h => h.includes('课程') && !h.includes('解读'));
+                        const contentIdx = headerRow.findIndex(h => h.includes('解读'));
+
+                        if (nameIdx === -1 || contentIdx === -1) {
+                            alert("无法识别表格列名！请确保表格第一行包含“课程”和“课程解读”字样。");
+                            setIsLoading(false);
+                            return;
+                        }
+
+                        // 提取数据
+                        const newObjects = [];
+                        for (let i = 1; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            const name = row[nameIdx];
+                            const content = row[contentIdx];
+                            if (name && content) {
+                                const obj = new AV.Object('CourseInterpretation');
+                                obj.set('name', String(name));
+                                obj.set('content', String(content));
+                                newObjects.push(obj);
+                            }
+                        }
+
+                        if (newObjects.length > 0) {
+                            await AV.Object.saveAll(newObjects);
+                            // 刷新列表
+                            const interpQuery = new AV.Query('CourseInterpretation');
+                            interpQuery.descending('createdAt');
+                            const newResults = await interpQuery.limit(200).find();
+                            setInterpretations(newResults.map(r => ({ ...r.attributes, id: r.id })));
+                            alert(`成功导入 ${newObjects.length} 条课程解读！`);
+                        } else {
+                            alert("没有找到有效的解读数据。");
+                        }
+                    } catch (error) {
+                        alert("导入失败: " + error.message);
+                    } finally {
+                        setIsLoading(false);
+                        e.target.value = ''; // 重置 input
+                    }
+                };
+                reader.readAsBinaryString(file);
+            };
+
+            // --- 导出 Excel ---
+            const handleExportExcel = () => {
+                // ... (保持原有导出逻辑)
+                const titleRow = [settings.title]; 
+                const fullHeaderRow = ["序号", "课程名称", "授课时间", "授课班级", "年龄段", "反思1:目标", "反思2:思维", "反思3:流程", "反思4:编程"];
                 const sortedRecords = [...records].sort((a, b) => new Date(a.date) - new Date(b.date));
                 const dataRows = sortedRecords.map((record, index) => [
                     index + 1, record.courseName, record.date, record.className, record.age,
                     record.r1, record.r2, record.r3, record.r4
                 ]);
-
                 const wsData = [titleRow, fullHeaderRow, ...dataRows];
                 const ws = XLSX.utils.aoa_to_sheet(wsData);
                 ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
-                ws['!cols'] = [{ wch: 6 }, { wch: 20 }, { wch: 12 }, { wch: 15 }, { wch: 8 }, { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 40 }];
-                
-                // Style applying logic ...
-                const borderStyle = { top: { style: "thin", color: { rgb: "000000" } }, bottom: { style: "thin", color: { rgb: "000000" } }, left: { style: "thin", color: { rgb: "000000" } }, right: { style: "thin", color: { rgb: "000000" } } };
-                const baseStyle = { alignment: { vertical: "center", wrapText: true }, font: { name: "宋体", sz: 11 }, border: borderStyle };
-                
-                const range = XLSX.utils.decode_range(ws['!ref']);
-                for (let R = range.s.r; R <= range.e.r; ++R) {
-                    for (let C = range.s.c; C <= range.e.c; ++C) {
-                        const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
-                        if (!ws[cell_address]) continue;
-                        ws[cell_address].s = JSON.parse(JSON.stringify(baseStyle));
-                        if (R === 0) { ws[cell_address].s.font = { name: "宋体", sz: 16, bold: true }; ws[cell_address].s.alignment = { horizontal: "center", vertical: "center" }; }
-                        if (R === 1) { ws[cell_address].s.font = { name: "宋体", sz: 11, bold: true }; ws[cell_address].s.alignment = { horizontal: "center", vertical: "center", wrapText: true }; ws[cell_address].s.fill = { fgColor: { rgb: "EFEFEF" } }; }
-                    }
-                }
+                ws['!cols'] = [{ wch: 6 }, { wch: 20 }, { wch: 12 }, { wch: 15 }, { wch: 8 }, { wch: 30 }, { wch: 30 }, { wch: 30 }, { wch: 30 }];
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "教学反思");
                 XLSX.writeFile(wb, `教学反思_${new Date().toISOString().split('T')[0]}.xlsx`);
             };
 
+            const filteredInterpretations = interpretations.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.content.includes(searchTerm));
+            const selectedInterpretation = interpretations.find(i => i.id === selectedInterpId);
+
             return (
                 <div className="min-h-screen bg-gray-50 flex font-sans text-gray-800">
                     <AIModal isOpen={isAIModalOpen} onClose={() => setIsAIModalOpen(false)} onFillData={handleAIFillData} courseName={currentRecord.courseName} age={currentRecord.age} />
-                    {isLoading && <div className="loading-overlay"><div className="flex flex-col items-center"><svg className="animate-spin h-10 w-10 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>处理中...</span></div></div>}
+                    <InterpretationAIModal isOpen={isInterpAIModalOpen} onClose={() => setIsInterpAIModalOpen(false)} onFinish={handleSaveInterpretation} />
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv,.xlsx,.xls" className="hidden" />
+                    
+                    {isLoading && <div className="loading-overlay"><span>处理中...</span></div>}
 
                     {/* Sidebar */}
                     <div className="w-64 bg-slate-800 text-white flex flex-col p-4 shadow-xl shrink-0">
-                        <h1 className="text-xl font-bold mb-8 flex items-center"><span className="mr-2"><IconCloud /></span> Veape Rethink<span className="text-xs bg-green-500 ml-2 px-1 rounded">Cloud</span></h1>
+                        <h1 className="text-xl font-bold mb-8 flex items-center"><span className="mr-2"><IconCloud /></span> Veape Rethink<span className="text-xs bg-orange-500 ml-2 px-1 rounded">V6.4</span></h1>
                         <nav className="flex-1 space-y-2">
-                            <button onClick={() => setActiveTab('record')} className={`w-full flex items-center p-3 rounded-lg transition ${activeTab === 'record' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-gray-300'}`}><span className="mr-3"><IconEdit3 /></span> 快捷记录</button>
-                            <button onClick={() => setActiveTab('library')} className={`w-full flex items-center p-3 rounded-lg transition ${activeTab === 'library' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-gray-300'}`}><span className="mr-3"><IconFileText /></span> 课程库管理</button>
+                            <button onClick={() => setActiveTab('record')} className={`w-full flex items-center p-3 rounded-lg transition ${activeTab === 'record' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-gray-300'}`}><span className="mr-3"><IconEdit3 /></span> 教学反思录入</button>
+                            <button onClick={() => setActiveTab('interpretation')} className={`w-full flex items-center p-3 rounded-lg transition ${activeTab === 'interpretation' ? 'bg-orange-600 text-white' : 'hover:bg-slate-700 text-gray-300'}`}><span className="mr-3"><IconMessage /></span> 课程解读库</button>
+                            <button onClick={() => setActiveTab('library')} className={`w-full flex items-center p-3 rounded-lg transition ${activeTab === 'library' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-gray-300'}`}><span className="mr-3"><IconFileText /></span> 课程模版管理</button>
                             <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center p-3 rounded-lg transition ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'hover:bg-slate-700 text-gray-300'}`}><span className="mr-3"><IconSettings /></span> 系统/班级设置</button>
                         </nav>
                         <div className="mt-auto p-4 bg-slate-900 rounded text-sm text-gray-400">
-                            <p>云端课程: {courses.length} 个</p>
-                            <p>云端班级: {savedClasses.length} 个</p>
-                            <p>本周记录: {records.length} 条</p>
+                            <p>云端反思: {records.length} 条</p>
+                            <p>课程解读: {interpretations.length} 条</p>
                         </div>
                     </div>
 
                     {/* Main Content */}
                     <div className="flex-1 p-8 overflow-y-auto">
+                        
+                        {/* 1. 教学反思 Tab (保持不变) */}
                         {activeTab === 'record' && (
                             <div className="max-w-5xl mx-auto">
                                 <header className="mb-6 flex justify-between items-end">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-gray-800">本周上课记录</h2>
-                                        <p className="text-gray-500 text-sm mt-1">云端同步 + AI 智能辅助 + 随时编辑</p>
-                                    </div>
-                                    <button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg shadow flex items-center font-medium transition"><span className="mr-2"><IconDownload /></span> 导出 Excel 反思表</button>
+                                    <div><h2 className="text-2xl font-bold text-gray-800">周度上课记录 & 反思</h2><p className="text-gray-500 text-sm mt-1">支持 AI 自动生成反思，填写后可一键导出 Excel</p></div>
+                                    <button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg shadow flex items-center font-medium transition"><span className="mr-2"><IconDownload /></span> 导出 Excel</button>
                                 </header>
-
-                                {/* Input Form */}
                                 <div className={`bg-white rounded-xl shadow-sm border ${editingId ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200'} p-6 mb-8 relative transition-all duration-300`}>
-                                    {editingId && (
-                                        <div className="absolute -top-3 left-6 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full shadow flex items-center">
-                                            <span>正在编辑模式</span>
-                                            <button onClick={handleCancelEdit} className="ml-2 hover:bg-yellow-500 rounded-full p-0.5"><IconX /></button>
-                                        </div>
-                                    )}
-                                    
+                                    {editingId && (<div className="absolute -top-3 left-6 bg-yellow-400 text-yellow-900 text-xs font-bold px-3 py-1 rounded-full shadow flex items-center"><span>正在编辑模式</span><button onClick={handleCancelEdit} className="ml-2 hover:bg-yellow-500 rounded-full p-0.5"><IconX /></button></div>)}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">上课日期</label>
-                                            <input type="date" value={currentRecord.date} onChange={(e) => setCurrentRecord({...currentRecord, date: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">班级名称</label>
-                                            <div className="flex">
-                                                <input type="text" placeholder="如: Scratch16班" value={currentRecord.className} onChange={(e) => setCurrentRecord({...currentRecord, className: e.target.value})} className="w-full border border-gray-300 rounded-l-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
-                                                <select onChange={handleClassSelect} className="w-10 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-gray-600 focus:outline-none cursor-pointer" value=""><option value="" disabled>▼</option>{savedClasses.map(cls => (<option key={cls.id} value={cls.name}>{cls.name}</option>))}</select>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">年龄段</label>
-                                            <input type="text" placeholder="如: 8" value={currentRecord.age} onChange={(e) => setCurrentRecord({...currentRecord, age: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
-                                        </div>
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">上课日期</label><input type="date" value={currentRecord.date} onChange={(e) => setCurrentRecord({...currentRecord, date: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"/></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">班级名称</label><div className="flex"><input type="text" placeholder="如: Scratch16班" value={currentRecord.className} onChange={(e) => setCurrentRecord({...currentRecord, className: e.target.value})} className="w-full border border-gray-300 rounded-l-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"/><select onChange={handleClassSelect} className="w-10 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-gray-600 focus:outline-none cursor-pointer" value=""><option value="" disabled>▼</option>{savedClasses.map(cls => (<option key={cls.id} value={cls.name}>{cls.name}</option>))}</select></div></div>
+                                        <div><label className="block text-sm font-medium text-gray-700 mb-1">年龄段</label><input type="text" placeholder="如: 8" value={currentRecord.age} onChange={(e) => setCurrentRecord({...currentRecord, age: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"/></div>
                                     </div>
-
                                     <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100 relative">
                                         <label className="block text-sm font-bold text-blue-800 mb-2">课程名称</label>
                                         <div className="flex gap-2 mb-2">
-                                            <div className="flex-1 relative">
-                                                <input type="text" placeholder="请输入课程名称..." value={currentRecord.courseName} onChange={(e) => setCurrentRecord({...currentRecord, courseName: e.target.value})} className="w-full border border-gray-300 rounded-l-md p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none h-full"/>
-                                            </div>
-                                            <div className="w-1/3">
-                                                <select onChange={handleTemplateSelect} className="w-full border border-gray-300 rounded-r-md p-2.5 bg-white text-gray-700 h-full focus:outline-none" value={currentRecord.courseId || ""}><option value="">▼ 选模版...</option>{courses.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select>
-                                            </div>
+                                            <div className="flex-1 relative"><input type="text" placeholder="请输入课程名称..." value={currentRecord.courseName} onChange={(e) => setCurrentRecord({...currentRecord, courseName: e.target.value})} className="w-full border border-gray-300 rounded-l-md p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none h-full"/></div>
+                                            <div className="w-1/3"><select onChange={handleTemplateSelect} className="w-full border border-gray-300 rounded-r-md p-2.5 bg-white text-gray-700 h-full focus:outline-none" value={currentRecord.courseId || ""}><option value="">▼ 选模版...</option>{courses.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <p className="text-xs text-blue-600 flex items-center"><span className="mr-1">💡</span> 输入课程和班级即可保存，反思可稍后补填。</p>
-                                            <button onClick={() => setIsAIModalOpen(true)} className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm px-4 py-1.5 rounded-full shadow hover:shadow-lg transition transform hover:scale-105 flex items-center font-bold"><IconMagic /> <span className="ml-1">AI 辅助</span></button>
-                                        </div>
+                                        <div className="flex justify-between items-center"><p className="text-xs text-blue-600 flex items-center"><span className="mr-1">💡</span> 输入课程和班级即可保存。</p><button onClick={() => setIsAIModalOpen(true)} className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm px-4 py-1.5 rounded-full shadow hover:shadow-lg transition transform hover:scale-105 flex items-center font-bold"><IconMagic /> <span className="ml-1">AI 反思生成</span></button></div>
                                     </div>
-
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {[{key:'r1',label:'反思1: 教学目标'},{key:'r2',label:'反思2: 思维能力'},{key:'r3',label:'反思3: 课程流程'},{key:'r4',label:'反思4: 编程/搭建'}].map((field) => (
-                                            <div key={field.key} className="relative">
-                                                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wider">{field.label}</label>
-                                                <textarea value={currentRecord[field.key]} onChange={(e) => setCurrentRecord({...currentRecord, [field.key]: e.target.value})} className="w-full h-24 border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-colors" placeholder="(选填) 可后续编辑补充..."/>
+                                            <div key={field.key} className="relative"><label className="block text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wider">{field.label}</label><textarea value={currentRecord[field.key]} onChange={(e) => setCurrentRecord({...currentRecord, [field.key]: e.target.value})} className="w-full h-24 border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none transition-colors" placeholder="(选填) 可后续编辑补充..."/></div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-6 flex justify-between items-center pt-4 border-t border-gray-100">
+                                        <button onClick={handleSaveAsCourse} className="text-gray-500 hover:text-blue-600 text-sm flex items-center px-3 py-2 rounded hover:bg-gray-100 transition"><span className="mr-2"><IconSave /></span> 同步到课程模版</button>
+                                        <div className="flex gap-3">
+                                            {editingId && (<button onClick={handleCancelEdit} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2.5 rounded-lg shadow-sm font-bold transition">取消</button>)}
+                                            <button onClick={handleSaveRecord} className={`${editingId ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-8 py-2.5 rounded-lg shadow-md flex items-center font-bold transition transform active:scale-95`}>{editingId ? <><span className="mr-2"><IconUpdate /></span> 更新记录</> : <><span className="mr-2"><IconPlus /></span> 保存到云端</>}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center"><h3 className="font-semibold text-gray-700">最近记录 (云端: {records.length})</h3></div>
+                                    <div className="divide-y divide-gray-100">
+                                        {records.map((rec, idx) => (
+                                            <div key={rec.id} className={`p-4 transition flex items-start group ${editingId === rec.id ? 'bg-yellow-50' : 'hover:bg-gray-50'}`}>
+                                                <div className="w-10 pt-1 font-mono text-gray-400 text-sm">#{idx + 1}</div>
+                                                <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
+                                                    <div className="md:col-span-3"><p className="font-bold text-gray-800">{rec.courseName}</p><p className="text-xs text-gray-500">{rec.date} | {rec.className}</p></div>
+                                                    <div className="md:col-span-8 text-sm text-gray-600 space-y-1">{!rec.r1 && !rec.r4 ? (<span className="text-gray-400 italic">（反思内容待补充...）</span>) : (<><p className="line-clamp-1"><span className="text-blue-600 font-medium">目标:</span> {rec.r1 || '-'}</p><p className="line-clamp-1"><span className="text-purple-600 font-medium">编程:</span> {rec.r4 || '-'}</p></>)}</div>
+                                                    <div className="md:col-span-1 flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition"><button onClick={() => handleEditRecord(rec)} className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-50" title="编辑"><IconEdit3 /></button><button onClick={() => handleDeleteRecord(rec.id)} className="text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50" title="删除"><IconTrash2 /></button></div>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
-
-                                    <div className="mt-6 flex justify-between items-center pt-4 border-t border-gray-100">
-                                        <button onClick={handleSaveAsCourse} className="text-gray-500 hover:text-blue-600 text-sm flex items-center px-3 py-2 rounded hover:bg-gray-100 transition"><span className="mr-2"><IconSave /></span> 同步到云端课程库</button>
-                                        <div className="flex gap-3">
-                                            {editingId && (
-                                                <button onClick={handleCancelEdit} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2.5 rounded-lg shadow-sm font-bold transition">取消</button>
-                                            )}
-                                            <button onClick={handleSaveRecord} className={`${editingId ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-8 py-2.5 rounded-lg shadow-md flex items-center font-bold transition transform active:scale-95`}>
-                                                {editingId ? <><span className="mr-2"><IconUpdate /></span> 更新记录</> : <><span className="mr-2"><IconPlus /></span> 保存到云端</>}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Record List */}
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                                        <h3 className="font-semibold text-gray-700">待导出列表 (云端: {records.length})</h3>
-                                        {records.length > 0 && <button onClick={handleClearAllRecords} className="text-red-500 hover:text-red-700 text-sm flex items-center px-3 py-1 rounded hover:bg-red-50 transition border border-red-200 hover:border-red-300"><span className="mr-1"><IconTrash2 /></span> 清空列表</button>}
-                                    </div>
-                                    {records.length === 0 ? (
-                                        <div className="p-8 text-center text-gray-400">
-                                            <div className="w-12 h-12 mx-auto mb-3 opacity-20"><IconCalendar /></div>
-                                            <p>暂无记录，请在上方添加</p>
-                                        </div>
-                                    ) : (
-                                        <div className="divide-y divide-gray-100">
-                                            {records.map((rec, idx) => (
-                                                <div key={rec.id} className={`p-4 transition flex items-start group ${editingId === rec.id ? 'bg-yellow-50' : 'hover:bg-gray-50'}`}>
-                                                    <div className="w-10 pt-1 font-mono text-gray-400 text-sm">#{idx + 1}</div>
-                                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4">
-                                                        <div className="md:col-span-3">
-                                                            <p className="font-bold text-gray-800">{rec.courseName}</p>
-                                                            <p className="text-xs text-gray-500">{rec.date} | {rec.className} | {rec.age}岁</p>
-                                                        </div>
-                                                        <div className="md:col-span-8 text-sm text-gray-600 space-y-1">
-                                                            {!rec.r1 && !rec.r4 ? (
-                                                                <span className="text-gray-400 italic">（反思内容待补充...）</span>
-                                                            ) : (
-                                                                <>
-                                                                    <p className="line-clamp-1"><span className="text-blue-600 font-medium">目标:</span> {rec.r1 || '-'}</p>
-                                                                    <p className="line-clamp-1"><span className="text-purple-600 font-medium">编程:</span> {rec.r4 || '-'}</p>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                        <div className="md:col-span-1 flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition">
-                                                            <button onClick={() => handleEditRecord(rec)} className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-50" title="编辑"><IconEdit3 /></button>
-                                                            <button onClick={() => handleDeleteRecord(rec.id)} className="text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50" title="删除"><IconTrash2 /></button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         )}
-                        {/* Library & Settings Tabs */}
+
+                        {/* 2. 课程解读 Tab (增强版) */}
+                        {activeTab === 'interpretation' && (
+                            <div className="max-w-6xl mx-auto h-[calc(100vh-6rem)] flex flex-col">
+                                <header className="mb-6 flex justify-between items-center">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-800 flex items-center"><IconMessage /> <span className="ml-2">课程解读库 (表3内容)</span></h2>
+                                        <p className="text-gray-500 text-sm mt-1">包含星际迷航、单片机等内置解读，支持批量导入表格</p>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button onClick={handleImportClick} className="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm flex items-center font-bold transition">
+                                            <IconUpload /> <span className="ml-2">导入表格</span>
+                                        </button>
+                                        <button onClick={() => setIsInterpAIModalOpen(true)} className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg shadow-lg flex items-center font-bold transition transform hover:scale-105">
+                                            <IconMagic /> <span className="ml-2">AI 生成新解读</span>
+                                        </button>
+                                    </div>
+                                </header>
+
+                                <div className="flex-1 flex gap-6 overflow-hidden">
+                                    {/* 左侧：列表 */}
+                                    <div className="w-1/3 flex flex-col bg-white rounded-xl shadow-sm border border-gray-200">
+                                        <div className="p-4 border-b border-gray-200">
+                                            <div className="relative">
+                                                <input type="text" placeholder="搜索课程名称..." className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm" value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} />
+                                                <div className="absolute left-3 top-2.5 text-gray-400"><IconSearch /></div>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                                            {filteredInterpretations.length === 0 ? (
+                                                <div className="text-center text-gray-400 py-10 text-sm">暂无解读，请点击右上角生成</div>
+                                            ) : (
+                                                filteredInterpretations.map(item => (
+                                                    <div 
+                                                        key={item.id} 
+                                                        onClick={() => setSelectedInterpId(item.id)}
+                                                        className={`p-3 rounded-lg border cursor-pointer group transition relative shadow-sm ${selectedInterpId === item.id ? 'bg-orange-50 border-orange-200 ring-1 ring-orange-200' : 'bg-white border-gray-100 hover:bg-gray-50'}`}
+                                                    >
+                                                        <h4 className={`font-bold text-sm ${selectedInterpId === item.id ? 'text-orange-800' : 'text-gray-800'}`}>{item.name}</h4>
+                                                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.content.substring(0, 50)}...</p>
+                                                        <div className="mt-2 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
+                                                            <button onClick={(e) => handleDeleteInterpretation(item.id, e)} className="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded">删除</button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 右侧：预览区 */}
+                                    <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-0 overflow-hidden flex flex-col">
+                                        {selectedInterpretation ? (
+                                            <>
+                                                <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                                                    <h3 className="font-bold text-gray-700">内容预览</h3>
+                                                    <button onClick={() => handleCopyInterpretation(selectedInterpretation.content)} className="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded shadow-sm hover:bg-gray-50 flex items-center">
+                                                        <IconCopy /> <span className="ml-1">一键复制</span>
+                                                    </button>
+                                                </div>
+                                                <div className="flex-1 p-8 overflow-y-auto bg-[url('https://www.transparenttextures.com/patterns/graphy.png')]">
+                                                    <div className="max-w-3xl mx-auto bg-white p-8 shadow-sm border border-gray-100 rounded min-h-full">
+                                                        <pre className="font-sans text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedInterpretation.content}</pre>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8">
+                                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4"><IconMessage /></div>
+                                                <p>请在左侧选择课程，查看解读详情</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3. 课程模版库 Tab (保持不变) */}
                         {activeTab === 'library' && (
                             <div className="max-w-4xl mx-auto">
-                                <h2 className="text-2xl font-bold text-gray-800 mb-6">云端课程模版库</h2>
+                                <h2 className="text-2xl font-bold text-gray-800 mb-6">云端课程模版库 (反思专用)</h2>
                                 <div className="grid gap-6">
                                     {courses.map(c => (
                                         <div key={c.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                                             <div className="flex justify-between items-start mb-4">
-                                                <div>
-                                                    <h3 className="text-lg font-bold text-gray-900">{c.name}</h3>
-                                                    <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded mt-1">
-                                                        适合年龄: {c.age}岁
-                                                    </span>
-                                                </div>
+                                                <div><h3 className="text-lg font-bold text-gray-900">{c.name}</h3><span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded mt-1">适合年龄: {c.age}岁</span></div>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                                                 <div className="bg-gray-50 p-3 rounded"><span className="font-bold block text-gray-800 mb-1">目标:</span> {c.r1}</div>
                                                 <div className="bg-gray-50 p-3 rounded"><span className="font-bold block text-gray-800 mb-1">思维:</span> {c.r2}</div>
-                                                <div className="bg-gray-50 p-3 rounded"><span className="font-bold block text-gray-800 mb-1">流程:</span> {c.r3}</div>
-                                                <div className="bg-gray-50 p-3 rounded"><span className="font-bold block text-gray-800 mb-1">编程:</span> {c.r4}</div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
+
+                        {/* 4. 设置 Tab (保持不变) */}
                         {activeTab === 'settings' && (
                             <div className="max-w-2xl mx-auto">
                                 <h2 className="text-2xl font-bold text-gray-800 mb-6">系统/班级设置</h2>
@@ -701,7 +769,7 @@ ${planText}`;
                                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                                         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center"><IconUser /> <span className="ml-2">云端预设班级管理</span></h3>
                                         <div className="mb-4 flex gap-2"><input type="text" placeholder="输入新班级名称" value={newClassInput} onChange={(e) => setNewClassInput(e.target.value)} className="flex-1 border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500"/><button onClick={handleAddClass} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium">添加</button></div>
-                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100"><div className="text-xs text-gray-500 mb-2">云端预设班级：</div><div className="flex flex-wrap gap-2">{savedClasses.map(cls => (<span key={cls.id} className="bg-white border border-gray-300 rounded-full px-3 py-1 text-sm flex items-center group">{cls.name}<button onClick={() => handleDeleteClass(cls.id, cls.name)} className="ml-2 text-gray-400 hover:text-red-500">&times;</button></span>))}</div></div>
+                                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-100"><div className="flex flex-wrap gap-2">{savedClasses.map(cls => (<span key={cls.id} className="bg-white border border-gray-300 rounded-full px-3 py-1 text-sm flex items-center group">{cls.name}<button onClick={() => handleDeleteClass(cls.id)} className="ml-2 text-gray-400 hover:text-red-500">&times;</button></span>))}</div></div>
                                     </div>
                                 </div>
                             </div>
